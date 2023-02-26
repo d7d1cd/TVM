@@ -1,17 +1,22 @@
 ﻿#ifndef tvmH
 #define tvmH
 
+#include "core.h"
 #include <filesystem>
+#include <vector>
+
 
 class toy_virtual_machine
 {
   public:
   void compile(std::filesystem::path p);
   void print_state() const;
+  void run();
 
   private:
-  unsigned char R1 = 0, R2 = 0, R3 = 0, R4 = 0;
-  unsigned char RAM[256];
+  vm_state state_;
+  std::vector<std::unique_ptr<instruction>> rom_;
 };
+
 
 #endif

@@ -1,7 +1,7 @@
 ﻿#include "tvm.h"
+#include "tvm_string.h"
 #include <iostream>
 #include <fstream>
-#include <vector>
 
 
 void toy_virtual_machine::compile(std::filesystem::path p)
@@ -10,22 +10,44 @@ void toy_virtual_machine::compile(std::filesystem::path p)
   if (!src_file.is_open())
 	throw std::invalid_argument("Can't open source file '" + p.string() + "'.");
 
-  std::vector<std::string> list;
+  // Прочитаю файл, пропуская ненужные строки
+  std::vector<std::pair<std::size_t, std::string>> source;
+  std::size_t num = 0;
   std::string line;
-  while (std::getline(src_file, line))
-	list.push_back(line);
+  while (++num, std::getline(src_file, line)) {
+	tvm::trim_comments(line);
+	tvm::trim(line);
+	if (!line.empty())
+	  source.push_back(std::make_pair(num, tvm::upper_case(line)));
+  }
 
-  for (auto& s : list)
-	std::cout << "'" << s << "'" << std::endl;
+  for (auto& i : source) // тестовая печать
+	std::cout << i.first << "\t|" << i.second << "|" << std::endl;
+
+
+//  operand op1{operand::REGISTER, 0}, op2{operand::CONSTANT, 42};
+//  rom_.push_back(std::make_unique<MOV>(op1, op2));
+//
+//  op2.type = operand::REGISTER;
+//  op2.value = 0;
+//  rom_.push_back(std::make_unique<ADD>(op1, op2));
+
+  state_.PS = rom_.size();
+}
+
+
+
+void toy_virtual_machine::run()
+{
+  while (state_.PC != state_.PS)
+	rom_[state_.PC]->execute(state_);
 }
 
 
 
 void toy_virtual_machine::print_state() const
 {
-  std::cout << "State of machine: " << std::endl
-			<< "\tR1 = " << static_cast<int>(R1) << std::endl
-			<< "\tR2 = " << static_cast<int>(R2) << std::endl
-			<< "\tR3 = " << static_cast<int>(R3) << std::endl
-			<< "\tR4 = " << static_cast<int>(R4) << std::endl;
+  std::cout << "State of machine: " << std::endl;
+  for (int i = 0, end = state_.R.size(); i < end; ++i)
+	std::cout << "\tR" << i + 1 << " = " << static_cast<int>(state_.R[i]) << std::endl;
 }

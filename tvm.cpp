@@ -4,11 +4,13 @@
 #include <fstream>
 
 
+
 void toy_virtual_machine::compile(std::filesystem::path p)
 {
   std::ifstream src_file(p);
   if (!src_file.is_open())
 	throw std::invalid_argument("Can't open source file '" + p.string() + "'.");
+
 
   // Прочитаю файл, пропуская ненужные строки
   std::vector<std::pair<std::size_t, std::string>> source;
@@ -21,16 +23,30 @@ void toy_virtual_machine::compile(std::filesystem::path p)
 	  source.push_back(std::make_pair(num, tvm::upper_case(line)));
   }
 
-  for (auto& i : source) // тестовая печать
-	std::cout << i.first << "\t|" << i.second << "|" << std::endl;
+  operand op1, op2;
+  compiler cmpl;
+  std::unique_ptr<instruction> ins;
 
+  for (auto& s : source) {
+	// Токенизируем строку, проверим корректность
+	auto t = tvm::tokenize(s.second, " ,");
+	if (t.size() > 3)
+	  throw std::runtime_error("\tLine " + std::to_string(s.first) + ": Too many identifiers");
 
-//  operand op1{operand::REGISTER, 0}, op2{operand::CONSTANT, 42};
-//  rom_.push_back(std::make_unique<MOV>(op1, op2));
-//
-//  op2.type = operand::REGISTER;
-//  op2.value = 0;
-//  rom_.push_back(std::make_unique<ADD>(op1, op2));
+	// Создадим операнды из токенов
+	if (t.size() == 1) {
+	  ins = cmpl.create_instruction(t[0]);
+	} else if (t.size() == 2) {
+	  op1.parse(t[1]);
+	  ins = cmpl.create_instruction(t[0], op1);
+	} else {
+	  op1.parse(t[1]);
+	  op2.parse(t[2]);
+	  ins = cmpl.create_instruction(t[0], op1, op2);
+	}
+
+	rom_.push_back(std::move(ins));
+  }
 
   state_.PS = rom_.size();
 }

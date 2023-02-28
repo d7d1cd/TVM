@@ -1,0 +1,6 @@
+mov r1, 5
+jmp label
+mov r2, 3
+
+label:
+mov r1, 42

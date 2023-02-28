@@ -1,0 +1,3 @@
+; Program begin
+
+MOV R1, 42 r3 ; Error "Too many identifiers"

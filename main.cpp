@@ -11,12 +11,21 @@ int main(int argc, char* argv[])
   }
 
   try {
+    std::cout << "Create virtual machine... ";
     toy_virtual_machine tvm;
+    std::cout << "Ok!" << std::endl;
+
+    std::cout << "Compile source code... ";
     tvm.compile(argv[1]);
+    std::cout << "Ok!" << std::endl;
+
+    std::cout << "Execute code... ";
     tvm.run();
+    std::cout << "Ok!" << std::endl;
+
     tvm.print_state();
   } catch (std::exception& e) {
-    std::cout << e.what() << std::endl;
+    std::cout << "Fail!" << std::endl << e.what() << std::endl;
     return EXIT_FAILURE;
   }
 

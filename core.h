@@ -17,18 +17,11 @@ struct vm_state
 };
 
 
-struct instruction
-{
-  virtual void execute(vm_state&) = 0;
-  virtual ~instruction() {}
-};
-
-
 struct operand
 {
   operand() = default;
   operand(const std::string& s) {
-    parse(s);
+	parse(s);
   }
 
   void parse(const std::string& s);
@@ -37,14 +30,22 @@ struct operand
 	switch (type) {
 	  case REGISTER: return state.R[value];
 	  case ADDRESS:  return state.RAM[value];
-	  case CONSTANT: return value;
+	  case CONSTANT:
+	  case LABEL:    return value;
 	  default:
-        throw std::runtime_error("Unknown operand type");
+		throw std::runtime_error("Unknown operand type");
 	}
   }
 
-  enum { REGISTER, ADDRESS, CONSTANT } type = REGISTER;
+  enum { REGISTER, ADDRESS, CONSTANT, LABEL } type = REGISTER;
   char value = 0;
+};
+
+
+struct instruction
+{
+  virtual void execute(vm_state&) = 0;
+  virtual ~instruction() {}
 };
 
 
@@ -53,6 +54,10 @@ class one_parm_instruction : public instruction
   public:
   one_parm_instruction(operand op1)
   : op1_{op1} {}
+
+  operand& operand_access() {
+	return op1_;
+  }
 
   protected:
   char& destination(vm_state& state) {
@@ -69,6 +74,10 @@ class two_parm_instruction : public one_parm_instruction
   public:
   two_parm_instruction(operand op1, operand op2)
   : one_parm_instruction(op1), op2_{op2} {}
+
+  operand& operand_access() {
+	return op2_;
+  }
 
   protected:
   char source(vm_state& state) {
@@ -108,6 +117,15 @@ struct POP : public one_parm_instruction
 };
 
 
+struct JMP : public one_parm_instruction
+{
+  using one_parm_instruction::one_parm_instruction;
+  void execute(vm_state& state) override {
+	state.PC = destination(state);
+  }
+};
+
+
 struct MOV : public two_parm_instruction
 {
   using two_parm_instruction::two_parm_instruction;
@@ -143,6 +161,7 @@ struct compiler
   std::unique_ptr<instruction> create_instruction(std::string i);
   std::unique_ptr<instruction> create_instruction(std::string i, operand op1);
   std::unique_ptr<instruction> create_instruction(std::string i, operand op1, operand op2);
+  std::unique_ptr<instruction> make_instruction(std::size_t l, std::vector<std::string>);
 };
 
 #endif

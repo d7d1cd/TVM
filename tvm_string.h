@@ -73,5 +73,26 @@ inline bool is_number(std::string_view s)
 }
 
 
+inline bool is_label(std::string& s)
+{
+  if (s.back() != ':')
+	return false;
+  s.erase(s.end() - 1);
+  if (s.front() == '.')
+	s.erase(s.begin());
+  return true;
+}
+
+
+inline bool is_word(std::string_view s)
+{
+  if (!std::isalpha(static_cast<unsigned char>(s.front())))
+    return false;
+  auto d = std::count_if(s.begin(), s.end(),
+             [](unsigned char c){ return std::isalpha(c) || std::isdigit(c);});
+  return d == s.length();
+}
+
+
 }
 #endif

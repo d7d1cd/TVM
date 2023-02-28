@@ -2,6 +2,7 @@
 #include "tvm_string.h"
 #include <iostream>
 #include <fstream>
+#include <unordered_map>
 
 
 
@@ -23,29 +24,47 @@ void toy_virtual_machine::compile(std::filesystem::path p)
 	  source.push_back(std::make_pair(num, tvm::upper_case(line)));
   }
 
-  operand op1, op2;
+
+  // Компиляция
   compiler cmpl;
-  std::unique_ptr<instruction> ins;
+  std::unordered_map<std::string, std::size_t> labels;
+  std::vector<std::tuple<std::size_t, std::size_t, std::string>> fix_instr;
 
   for (auto& s : source) {
-	// Токенизируем строку, проверим корректность
-	auto t = tvm::tokenize(s.second, " ,");
-	if (t.size() > 3)
-	  throw std::runtime_error("\tLine " + std::to_string(s.first) + ": Too many identifiers");
+	auto t = tvm::tokenize(s.second, " ,\t");
 
-	// Создадим операнды из токенов
-	if (t.size() == 1) {
-	  ins = cmpl.create_instruction(t[0]);
-	} else if (t.size() == 2) {
-	  op1.parse(t[1]);
-	  ins = cmpl.create_instruction(t[0], op1);
-	} else {
-	  op1.parse(t[1]);
-	  op2.parse(t[2]);
-	  ins = cmpl.create_instruction(t[0], op1, op2);
+	// Проверим на "меткость"
+	if (tvm::is_label(t[0])) {
+	  labels[t[0]] = rom_.size();
+	  t.erase(t.begin());
+	  if (t.empty())
+		continue;
 	}
 
-	rom_.push_back(std::move(ins));
+    if (t.size() > 3)
+	  throw std::runtime_error("\tLine " + std::to_string(s.first) + ": Too many identifiers");
+
+	// Попробуем создать инструкцию
+	auto instr = cmpl.make_instruction(s.first, t);
+	auto tpi_ptr = dynamic_cast<one_parm_instruction*>(instr.get());
+	if (tpi_ptr && tpi_ptr->operand_access().type == operand::LABEL)
+	  fix_instr.push_back({s.first, rom_.size(), t[1]});
+
+	rom_.push_back(std::move(instr));
+  }
+
+
+  // Замена меток на реальные адреса
+  for (auto& instr : fix_instr) {
+	auto label = std::get<2>(instr);
+	auto value = labels.find(label);
+	if (value == labels.end())
+	  throw std::runtime_error("\tLine " + std::to_string(std::get<0>(instr)) +
+		": Label '" + label + "' not found");
+
+	auto& i = rom_[std::get<1>(instr)];
+	auto ptr = dynamic_cast<one_parm_instruction*>(i.get());
+	ptr->operand_access().value = value->second;
   }
 
   state_.PS = rom_.size();

@@ -1,3 +1,2 @@
-; Program begin
-
-MOV R1, 42 r3 ; Error "Too many identifiers"
+MOV R1, 43 r3 ; Line 1: Too many identifiers
+jmp end       ; Line 2: Label 'END' not found
